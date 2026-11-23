@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Conditionals — Corridor AR</title>
+<title>Conditionals — Campus AR</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -32,7 +32,7 @@ button:disabled{opacity:.45;cursor:not-allowed;background:transparent;color:var(
 <body>
 <canvas id="c" tabindex="0"></canvas>
 <div id="intro"><div>
-<h1>Conditionals<br>Corridor</h1>
+<h1>Conditionals<br>Campus</h1>
 <div class="btns"><button id="bar" class="primary">Enter AR</button><button id="bsim">Simulate on screen</button></div>
 </div></div>
 <canvas id="map" width="240" height="240"></canvas>
@@ -245,7 +245,7 @@ class Rover{
   say(text){this.speech=null;const toks=[...String(text).toUpperCase().matchAll(/\{(\w+)\}/g)].map(m=>m[1]).filter(k=>FACES[k]);if(!toks.length)return;this.override={face:toks[0],color:EMOJI_C[toks[0]]||WHITE,t:2.2};if(toks.length>1)this.queue.unshift(...toks.slice(1).map(k=>'{'+k+'}'));}
   step(dt,visitors){
     const st=this.style;
-    let dvx=0,dvz=0;const maxS=st.fast?0.95:st.mode==='mirror'?1.1:0.55;
+    let dvx=0,dvz=0;const maxS=this.maxS||(st.fast?0.95:st.mode==='mirror'?1.1:0.55);
     if(st.mode==='mirror'){dvx=clamp(player.vx,-1,1);dvz=clamp(player.vz,-1,1);}
     else if(st.mode!=='freeze'&&st.mode!=='spin'){const dx=this.tx-this.x,dz=this.tz-this.z,d=Math.hypot(dx,dz);if(d>0.03){const s=Math.min(maxS,d*1.15);dvx=dx/d*s;dvz=dz/d*s;}}
     for(const o of rovers){if(o===this)continue;const dx=this.x-o.x,dz=this.z-o.z,d=Math.hypot(dx,dz);if(d<0.6&&d>1e-4){const p=(0.6-d)/0.6*0.9;dvx+=dx/d*p;dvz+=dz/d*p;}}
@@ -338,12 +338,12 @@ function audioInit(){
 }
 function roverVoice(r,mood,delay=0){
   if(!AU.ctx||!AU.on||!r)return;const ctx=AU.ctx,t0=ctx.currentTime+delay+0.01,out=spotNode(r.headPos(new THREE.Vector3()));
-  const B={happy:900,sad:540,angry:150,curious:700,hello:760,sleepy:300,excited:1000,murmur:640}[mood]||700,base=B*r.vp;
-  const n={happy:5,sad:4,angry:6,curious:4,hello:2,sleepy:2,excited:8,murmur:3}[mood]||3;
+  const B={disgust:260,fear:1250,happy:900,sad:540,angry:150,curious:700,hello:760,sleepy:300,excited:1000,murmur:640}[mood]||700,base=B*r.vp;
+  const n={disgust:3,fear:7,happy:5,sad:4,angry:6,curious:4,hello:2,sleepy:2,excited:8,murmur:3}[mood]||3;
   let tt=t0;for(let k=0;k<n;k++){const dur=mood==='sleepy'?0.38:mood==='angry'?0.07:rand(0.05,0.11);let f;
-    if(mood==='happy')f=base*(1+k*0.12+rand(-.05,.05));else if(mood==='sad')f=base*(1.15-k*0.13);else if(mood==='curious')f=base*(k===n-1?1.6:rand(.85,1.1));else if(mood==='hello')f=base*(k?1.5:1);else if(mood==='excited')f=base*rand(.8,1.9);else if(mood==='angry')f=base*rand(.9,1.2);else f=base*rand(.8,1.25);
-    const o=ctx.createOscillator();o.type=mood==='angry'?'sawtooth':(k%2?'triangle':'sine');o.frequency.setValueAtTime(f,tt);o.frequency.exponentialRampToValueAtTime(f*(mood==='sad'?0.84:mood==='curious'&&k===n-1?1.35:rand(.92,1.12)),tt+dur);
-    const g=ctx.createGain(),vol=mood==='murmur'?0.022:mood==='sleepy'?0.03:0.045;g.gain.setValueAtTime(0.0001,tt);g.gain.exponentialRampToValueAtTime(vol,tt+0.008);g.gain.exponentialRampToValueAtTime(0.0001,tt+dur);
+    if(mood==='happy')f=base*(1+k*0.12+rand(-.05,.05));else if(mood==='sad')f=base*(1.15-k*0.13);else if(mood==='curious')f=base*(k===n-1?1.6:rand(.85,1.1));else if(mood==='hello')f=base*(k?1.5:1);else if(mood==='excited')f=base*rand(.8,1.9);else if(mood==='disgust')f=base*(1.25-k*0.22);else if(mood==='fear')f=base*rand(.92,1.18);else if(mood==='angry')f=base*rand(.9,1.2);else f=base*rand(.8,1.25);
+    const o=ctx.createOscillator();o.type=(mood==='angry'||mood==='disgust')?'sawtooth':(k%2?'triangle':'sine');o.frequency.setValueAtTime(f,tt);o.frequency.exponentialRampToValueAtTime(f*(mood==='sad'?0.84:mood==='curious'&&k===n-1?1.35:rand(.92,1.12)),tt+dur);
+    const g=ctx.createGain(),vol=(mood==='murmur'?0.022:mood==='sleepy'?0.03:0.045)*(typeof VOL==='number'?VOL:1);g.gain.setValueAtTime(0.0001,tt);g.gain.exponentialRampToValueAtTime(vol,tt+0.008);g.gain.exponentialRampToValueAtTime(0.0001,tt+dur);
     o.connect(g).connect(out);o.start(tt);o.stop(tt+dur+0.03);tt+=dur+rand(0.015,0.05);}
 }
 function spotNode(p){const ctx=AU.ctx,pn=ctx.createPanner();pn.panningModel='HRTF';pn.distanceModel='inverse';pn.refDistance=1.2;if(pn.positionX){pn.positionX.value=p.x;pn.positionY.value=p.y;pn.positionZ.value=p.z;}else pn.setPosition(p.x,p.y,p.z);pn.connect(AU.master);return pn;}
@@ -375,7 +375,7 @@ function updAudio(){if(!AU.ctx)return;const L=AU.ctx.listener;camera.getWorldPos
 // ================= live path map (occupancy grid) =================
 // Every frame a fan of depth rays is fired from the head. Rays that land on the floor
 // carve free space; rays that land on something at body height mark an obstacle.
-const G={res:0.12,N:420};G.half=G.N*G.res/2;G.lo=new Float32Array(G.N*G.N);
+const G={res:0.15,N:1000};G.half=G.N*G.res/2;G.lo=new Float32Array(G.N*G.N);
 const L_FREE=-0.32,L_OCC=1.6,L_MIN=-4,L_MAX=6,OCC_T=0.8,FREE_T=-0.6;
 function gi(x,z){const i=Math.floor((x+G.half)/G.res),j=Math.floor((z+G.half)/G.res);if(i<0||j<0||i>=G.N||j>=G.N)return -1;return j*G.N+i;}
 const isOcc=id=>id<0||G.lo[id]>OCC_T;
@@ -402,119 +402,302 @@ function wallPush(x,z){let px=0,pz=0;for(const [ox,oz,d] of WP){const id=gi(x+ox
 const FAN=[];[-75,-52,-32,-16,0,16,32,52,75].forEach(a=>FAN.push([a,-7]));[-62,-38,-16,0,16,38,62].forEach(a=>FAN.push([a,-22]));[-35,0,35].forEach(a=>FAN.push([a,-45]));
 const FAN_DIRS=FAN.map(([a,p])=>{const ya=a*Math.PI/180,pa=p*Math.PI/180;return new THREE.Vector3(Math.sin(ya)*Math.cos(pa),Math.sin(pa),-Math.cos(ya)*Math.cos(pa));});
 
-// ================= swarm in the corridor =================
-const SW={hl:1.2,hr:1.2,placed:false,cx:0,cz:0,dx:0,dz:-1,nx:1,nz:0,s0:-3,s1:3,homes:[],refreshT:0};
-const STY={
-  sleep:{mode:'go',face:'SLEEP',color:SLEEPC,breath:true},
-  watch:{mode:'go',face:'NEUTRAL',color:WHITE},
-  smile:{mode:'go',face:'SMILE',color:WARM},
-  gate:{mode:'go',face:'GRIM',color:COOL,fast:true},
-  angry:{mode:'go',face:'ANGRY',color:REDC,fast:true},
-  breath:{mode:'freeze',face:'SLEEP',color:[110,140,255],breath:true},
+// ================= emotions =================
+Object.assign(FACES,{
+  SAD:B('..oooo.. .o....o. o..##..o o#....#o o......o o..##..o .o#..#o. ..oooo..'),
+  DISGUST:B('..oooo.. .o....o. o##..##o o......o o....#.o o.####.o .o....o. ..oooo..'),
+  FEAR:B('..oooo.. .o....o. o##..##o o##..##o o......o o.####.o .o#..#o. ..oooo..'),
+  CURIOUS:B('..oooo.. .o..##o. o.#..##o o....##o o......o o...##.o .o....o. ..oooo..'),
+  BORED:B('..oooo.. .o....o. o##..##o o.#..#.o o......o o.####.o .o....o. ..oooo..'),
+});
+const EMO={
+  neutral:{face:'NEUTRAL',color:WHITE}, happy:{face:'SMILE',color:WARM}, joy:{face:'JOY',color:WARM},
+  love:{face:'HEART',color:[255,170,90]}, sad:{face:'SAD',color:[110,140,255]}, angry:{face:'ANGRY',color:REDC,fast:true},
+  disgust:{face:'DISGUST',color:[150,205,70]}, fear:{face:'FEAR',color:[190,170,255],fast:true}, curious:{face:'CURIOUS',color:[110,225,215]},
+  surprised:{face:'SURPRISED',color:[238,192,52]}, bored:{face:'BORED',color:[150,150,150]}, sleep:{face:'SLEEP',color:SLEEPC,breath:true},
+  grim:{face:'GRIM',color:COOL}, question:{face:'QUESTION',color:WHITE}, eye:{face:'EYE',color:WHITE},
 };
-const SG={mood:'sleep',evalT:1,gateUntil:0,gating:false,slowT:0,lastReward:-99,t:0};
-const toPath=(x,z)=>({s:(x-SW.cx)*SW.dx+(z-SW.cz)*SW.dz,l:(x-SW.cx)*SW.nx+(z-SW.cz)*SW.nz});
-const fromPath=(s,l)=>({x:SW.cx+SW.dx*s+SW.nx*l,z:SW.cz+SW.dz*s+SW.nz*l});
-function placeSwarm(x,z){
-  const c=corridorAt(x,z);
-  let dx=c.dx,dz=c.dz;if(dx*(x-player.x)+dz*(z-player.z)<0){dx=-dx;dz=-dz;}   // axis points away from the walker
-  const nx=-dz,nz=dx;
-  const L=run(x,z,nx,nz,3.5),R=run(x,z,-nx,-nz,3.5);const mid=(L-R)/2;
-  Object.assign(SW,{placed:true,cx:x+nx*mid,cz:z+nz*mid,dx,dz,nx,nz});{const wl=runWall(player.x,player.z,nx,nz,3.5),wr=runWall(player.x,player.z,-nx,-nz,3.5);const tot=(wl!==null&&wr!==null)?wl+wr:2.4;SW.hl=SW.hr=tot/2;}
-  computeHomes();
-  rovers.forEach((r,k)=>{const h=SW.homes[k];r.x=h.x;r.z=h.z;r.vx=r.vz=0;r.yaw=Math.atan2(player.x-r.x,player.z-r.z);r.group.visible=true;r.key='';});
-  SG.mood='';SG.gateUntil=0;SG.gating=false;
-  sfx('wake');
+const VOICE_OF={happy:'happy',joy:'excited',love:'happy',sad:'sad',angry:'angry',disgust:'disgust',fear:'fear',curious:'curious',surprised:'curious',bored:'sleepy',sleep:'sleepy',grim:'sad',question:'curious'};
+const STYLE_CACHE={};
+function styleOf(e,frozen){const k=e+(frozen?'|f':'');return STYLE_CACHE[k]||(STYLE_CACHE[k]={...EMO[e],mode:frozen?'freeze':'go'});}
+const PERSONAS=['shy','bold','clingy','grumpy','bold','shy','clingy','grumpy','bold','shy','clingy'];
+rovers.forEach((r,i)=>Object.assign(r,{emo:'curious',emoT:0,aff:0,persona:PERSONAS[i],present:false,leaving:false,gaze:0,voiceT:0,roam:Math.random()*6.28,roamR:rand(1.8,3.3),flee:0,shown:''}));
+function emote(r,e,dur=3,voice=true){if(r.emo===e&&r.emoT>0){r.emoT=Math.max(r.emoT,dur);return;}r.emo=e;r.emoT=dur;if(voice&&r.voiceT<=0&&VOICE_OF[e]){roverVoice(r,VOICE_OF[e],Math.random()*0.15);r.voiceT=1.4;}}
+function personaEmo(r,e){if(e==='sad'&&r.persona==='grumpy')return 'disgust';if(e==='fear'&&r.persona==='bold')return 'angry';if(e==='angry'&&r.persona==='shy')return 'fear';return e;}
+const present=()=>rovers.filter(r=>r.present);
+const nearestPresent=n=>present().filter(r=>!r.leaving).sort((a,b)=>dist(a,player)-dist(b,player)).slice(0,n);
+function hideRover(r){r.present=false;r.leaving=false;r.group.visible=false;r.x=r.z=1e4;}
+function showRover(r,p){r.present=true;r.leaving=false;r.x=p.x;r.z=p.z;r.px=p.x;r.pz=p.z;r.vx=r.vz=0;r.yaw=Math.atan2(player.x-p.x,player.z-p.z);r.group.visible=true;r.key='';}
+
+// ================= place understanding =================
+// From the live map, every 0.4 s: what kind of place is the walker in?
+function placeAt(x,z,hx,hz){
+  const runs=[];for(let k=0;k<16;k++){const a=k*Math.PI/8;runs.push(run(x,z,Math.sin(a),Math.cos(a),8));}
+  const long=runs.map(r=>r>=3.2);const groups=[];let cur=null;
+  for(let k=0;k<16;k++){if(long[k]){if(!cur){cur={ks:[]};groups.push(cur);}cur.ks.push(k);}else cur=null;}
+  if(groups.length>1&&long[0]&&long[15]){const g0=groups.shift();groups[groups.length-1].ks.push(...g0.ks);}
+  const branches=groups.filter(g=>g.ks.length<9).map(g=>{let sx=0,sz=0;g.ks.forEach(k=>{const a=k*Math.PI/8;sx+=Math.sin(a);sz+=Math.cos(a);});const m=Math.hypot(sx,sz)||1;return {dx:sx/m,dz:sz/m,len:Math.max(...g.ks.map(k=>runs[k]))};});
+  const c=corridorAt(x,z);const width=c.left+c.right;const fwd=run(x,z,hx,hz,8);
+  let type;
+  if(branches.length>=3)type='junction';
+  else if(width>4.6||groups.some(g=>g.ks.length>=9))type='open';
+  else if(width<1.5)type='narrow';
+  else if(fwd<2.2&&branches.length<=1)type='deadend';
+  else type='corridor';
+  return {type,branches,width,axis:c};
 }
-function computeHomes(){
-  const n=rovers.length,per=Math.ceil(n/2),span=(per-1)*1.05;SW.s0=-span/2-0.3;SW.s1=span/2+0.3;
-  SW.homes=[];
-  // learn each wall's distance from cross-sections where the wall was actually seen
-  const L=[],Rr=[];for(let s=SW.s0-4;s<=SW.s1+2;s+=0.5){const a=fromPath(s,0);const l=runWall(a.x,a.z,SW.nx,SW.nz,3.5),r=runWall(a.x,a.z,-SW.nx,-SW.nz,3.5);if(l!==null)L.push(l);if(r!==null)Rr.push(r);}
-  const med=a=>{a.sort((x,y)=>x-y);return a[Math.floor(a.length*0.6)];};if(L.length>2)SW.hl=damp(SW.hl,med(L),2,0.5);if(Rr.length>2)SW.hr=damp(SW.hr,med(Rr),2,0.5);
-  for(let k=0;k<n;k++){const side=k%2?1:-1,idx=Math.floor(k/2);const s=-span/2+idx*1.05+(side>0?0.5:0);
-    const a=fromPath(s,0);const seen=runWall(a.x,a.z,SW.nx*side,SW.nz*side,3.5);const w=seen!==null?seen:(side>0?SW.hl:SW.hr);const l=side*Math.max(0.25,w-0.4);SW.homes.push(fromPath(s,l));}
+function snapFree(x,z){
+  const ok=(x,z)=>{const id=gi(x,z);if(id<0||G.lo[id]>-0.2)return false;for(const [ox,oz] of NB)if(isOcc(gi(x+ox,z+oz)))return false;return true;};
+  if(ok(x,z))return {x,z};for(let r=0.15;r<=1.6;r+=0.15)for(let a=0;a<6.28;a+=0.45){const px=x+Math.cos(a)*r,pz=z+Math.sin(a)*r;if(ok(px,pz))return {x:px,z:pz};}return null;}
+const NB=[[0.3,0],[-0.3,0],[0,0.3],[0,-0.3],[0.21,0.21],[-0.21,0.21],[0.21,-0.21],[-0.21,-0.21]];
+
+
+// ================= geolocation + campus zones =================
+// Quest 3 has no GPS: the browser gives Wi-Fi location (coarse, ~10–50 m). We fuse it with the
+// headset's precise local tracking: location fixes + walked path → map rotation + offset, so your
+// campus position follows every real step and drifts get corrected by each new fix.
+// EDIT ZONES: right-click a spot in Google Maps, copy "lat, lon", set a radius (m) and a mood.
+// moods: quiet · strict · playful · home · forbidden · finale
+const ZONES=[
+  // {name:'library',  lat:23.00000, lon:72.00000, r:25, mood:'quiet'},
+  // {name:'canteen',  lat:23.00000, lon:72.00000, r:30, mood:'playful'},
+  // {name:'admin',    lat:23.00000, lon:72.00000, r:25, mood:'strict'},
+  // {name:'studio',   lat:23.00000, lon:72.00000, r:20, mood:'home'},
+  // {name:'director', lat:23.00000, lon:72.00000, r:15, mood:'forbidden'},
+  // {name:'gate',     lat:23.00000, lon:72.00000, r:20, mood:'finale'},
+];
+// zones in metres from the start point, used by the laptop simulator (and indoors without location)
+const SIM_ZONES=[{name:'plaza',x:13,z:-28,r:6,mood:'playful'},{name:'quiet wing',x:-9,z:-21.3,r:3.5,mood:'quiet'},{name:'room',x:-22,z:-21,r:3.5,mood:'strict'}];
+const R_E=6371000;
+const LOC={started:false,ok:false,acc:999,lat0:null,lon0:null,samples:[],theta:null,T:null,est:null,zone:null,zoneT:0,trail:[]};
+function llToM(lat,lon){return {e:(lon-LOC.lon0)*Math.PI/180*R_E*Math.cos(LOC.lat0*Math.PI/180),n:(lat-LOC.lat0)*Math.PI/180*R_E};}
+function mToLL(e,n){return {lat:LOC.lat0+n/R_E*180/Math.PI,lon:LOC.lon0+e/(R_E*Math.cos(LOC.lat0*Math.PI/180))*180/Math.PI};}
+function geoStart(){if(LOC.started||!('geolocation' in navigator))return;LOC.started=true;try{navigator.geolocation.watchPosition(onGeo,()=>{},{enableHighAccuracy:true,maximumAge:3000,timeout:20000});}catch(e){}}
+function onGeo(p){const {latitude:lat,longitude:lon,accuracy:acc}=p.coords;if(!isFinite(lat)||acc>150)return;
+  if(LOC.lat0===null){LOC.lat0=lat;LOC.lon0=lon;}LOC.ok=true;LOC.acc=acc;const m=llToM(lat,lon);
+  LOC.samples.push({e:m.e,n:m.n,ux:player.x,uy:-player.z,w:1/Math.max(9,acc*acc)});if(LOC.samples.length>240)LOC.samples.shift();
+  fitMap();}
+// weighted 2-D Procrustes: (e,n) = T + R(θ)·(x,−z)
+function fitMap(){const S=LOC.samples;if(S.length<5)return;let W=0,ux=0,uy=0,e=0,n=0;S.forEach(s=>{W+=s.w;ux+=s.w*s.ux;uy+=s.w*s.uy;e+=s.w*s.e;n+=s.w*s.n;});ux/=W;uy/=W;e/=W;n/=W;
+  let a=0,b=0,spread=0;S.forEach(s=>{const dx=s.ux-ux,dy=s.uy-uy,de=s.e-e,dn=s.n-n;a+=s.w*(dx*de+dy*dn);b+=s.w*(dx*dn-dy*de);spread+=s.w*(dx*dx+dy*dy);});
+  if(Math.sqrt(spread/W)<7)return;   // need ~20–25 m of walking before the heading is trustworthy
+  const th=Math.atan2(b,a),c=Math.cos(th),s=Math.sin(th);LOC.theta=th;LOC.T={e:e-(c*ux-s*uy),n:n-(s*ux+c*uy)};}
+function geoEstimate(){
+  if(LOC.lat0===null)return null;
+  if(LOC.theta!==null){const c=Math.cos(LOC.theta),s=Math.sin(LOC.theta),ux=player.x,uy=-player.z;return {e:LOC.T.e+c*ux-s*uy,n:LOC.T.n+s*ux+c*uy,acc:Math.max(4,LOC.acc*0.5)};}
+  const L=LOC.samples[LOC.samples.length-1];return L?{e:L.e,n:L.n,acc:LOC.acc}:null;}
+function currentZone(){
+  if(simOn&&!arSession){for(const z of SIM_ZONES)if(Math.hypot(player.x-z.x,player.z-z.z)<z.r)return z;return null;}
+  const p=geoEstimate();if(!p||!ZONES.length)return null;let best=null,bd=1e9;
+  for(const z of ZONES){const m=llToM(z.lat,z.lon);const d=Math.hypot(p.e-m.e,p.n-m.n);if(d<z.r+Math.min(p.acc,20)&&d<bd){bd=d;best=z;}}return best;}
+let VOL=1;
+function zoneMod(){const m=LOC.zone?LOC.zone.mood:null;const night=(()=>{const h=new Date().getHours();return h>=19||h<6;})();
+  const o={trust:0,vol:night?0.75:1,speed:night?0.85:1,strictMid:false,forgiveFast:false,block:false,roam:1};
+  if(m==='quiet'){o.vol*=0.35;o.speed*=0.6;o.strictMid=true;}
+  if(m==='strict'){o.trust=-0.3;o.strictMid=true;}
+  if(m==='playful'){o.trust=0.4;o.forgiveFast=true;o.roam=1.5;}
+  if(m==='home'){o.trust=0.25;o.speed*=0.8;}
+  if(m==='forbidden'){o.trust=-0.4;o.block=true;}
+  return o;}
+function updGeo(dt){
+  LOC.zoneT-=dt;if(LOC.zoneT>0||!ST.on)return;LOC.zoneT=1;
+  const est=geoEstimate();if(est){const ll=mToLL(est.e,est.n);const L=LOC.trail[LOC.trail.length-1];if(!L||Math.hypot(L.e-est.e,L.n-est.n)>2)LOC.trail.push({e:est.e,n:est.n,lat:ll.lat,lon:ll.lon,t:Date.now()});}
+  const z=currentZone();if(z===LOC.zone)return;LOC.zone=z;
+  if(!z){present().forEach(r=>emote(r,'curious',1.2,false));return;}
+  const pr=present();
+  if(z.mood==='quiet')pr.forEach((r,k)=>emote(r,'sleep',2.5,k<2));
+  if(z.mood==='strict')pr.forEach((r,k)=>emote(r,'eye',2,k<3));
+  if(z.mood==='playful')pr.forEach((r,k)=>{emote(r,'joy',2.5,k<5);r.flash=1;});
+  if(z.mood==='home')pr.forEach((r,k)=>emote(r,r.aff>0.2?'love':'happy',2.5,k<3));
+  if(z.mood==='forbidden')pr.forEach((r,k)=>emote(r,personaEmo(r,'disgust'),3,k<4));
+  if(z.mood==='finale'&&ST.act>=3&&ST.act<5)setAct(5);
 }
-function refreshAxis(){
-  const c=corridorAt(SW.cx,SW.cz);let dx=c.dx,dz=c.dz;if(dx*SW.dx+dz*SW.dz<0){dx=-dx;dz=-dz;}
-  if(dx*SW.dx+dz*SW.dz>0.85){SW.dx=damp(SW.dx,dx,1,0.5);SW.dz=damp(SW.dz,dz,1,0.5);const m=Math.hypot(SW.dx,SW.dz);SW.dx/=m;SW.dz/=m;SW.nx=-SW.dz;SW.nz=SW.dx;}
-  const L=run(SW.cx,SW.cz,SW.nx,SW.nz,3.5),R=run(SW.cx,SW.cz,-SW.nx,-SW.nz,3.5);const mid=(L-R)/2;SW.cx+=SW.nx*mid*0.3;SW.cz+=SW.nz*mid*0.3;
-  computeHomes();
+window.addEventListener('load',()=>setTimeout(geoStart,600));
+
+// ================= story =================
+// Acts: 0 arrival · 1 meeting · 2 rules · 3 choices · 4 inversion · 5 goodbye
+const ST={on:false};
+function resetStory(){
+  Object.assign(ST,{on:true,act:0,actT:0,t:0,dist:0,trust:0.15,obey:0,defy:0,choices:0,juncSeen:0,rule:'slow',place:'corridor',info:null,hist:[],evalT:1.5,gateUntil:0,gating:false,goodT:0,rewards:0,punish:0,junc:null,juncCool:0,adaptAt:null,fastAcc:0,gb:null,ended:false,trail:[],lastPt:{x:player.x,z:player.z},hx:player.fx,hz:player.fz,spawnT:0,placeT:0,hl:1.2,hr:1.2});
+  rovers.forEach(r=>{hideRover(r);r.aff=0;r.emo='curious';r.emoT=0;r.key='';});
 }
-function nearestAssign(list,slots){const used=new Set();const pairs=[];list.forEach(r=>slots.forEach((s,i)=>pairs.push([Math.hypot(r.x-s.x,r.z-s.z),r,i])));pairs.sort((a,b)=>a[0]-b[0]);const done=new Set();for(const [,r,i] of pairs){if(done.has(r)||used.has(i))continue;done.add(r);used.add(i);r.tx=slots[i].x;r.tz=slots[i].z;}return done;}
-function updSwarm(dt){
-  if(!SW.placed)return;
-  SG.t+=dt;SW.refreshT-=dt;if(SW.refreshT<=0){SW.refreshT=1;refreshAxis();}
-  const p=toPath(player.x,player.z),cls=player.cls;
-  const near=p.s>SW.s0-8&&p.s<SW.s1+4&&Math.abs(p.l)<4;
-  let mood;
-  if(!near)mood=p.s>=SW.s1+4?'watch':'sleep';
-  else{
-    SG.evalT-=dt;
-    if(SG.evalT<=0){SG.evalT=1.2;
-      if(cls==='fast'){if(!SG.gating){const r=nearest(1)[0];if(r)roverVoice(r,'sad');}SG.gateUntil=SG.t+3;}
-      else if(cls==='slow'&&!SG.gating){SG.lastReward=SG.t;nearest(2).forEach((r,k)=>{r.flash=1;roverVoice(r,'happy',k*0.12);});}}
-    SG.slowT=cls==='slow'||cls==='still'?SG.slowT+dt:0;
-    SG.gating=SG.t<SG.gateUntil||(SG.gating&&SG.slowT<1.6);
-    mood=player.still>10?'breath':player.still>6?'angry':SG.gating?'gate':(SG.t-SG.lastReward<4?'smile':'watch');
+function setAct(n){
+  ST.act=n;ST.actT=0;
+  if(n===2){ST.rule='slow';present().forEach((r,k)=>emote(r,'eye',1.6,k<3));}
+  if(n===3){ST.rule='slow';}
+  if(n===4){ST.rule='fast';ST.fastAcc=0;ST.adaptAt=null;present().forEach(r=>emote(r,'bored',1.5,false));}
+  if(n===5){ST.gb={t:0,fa:Math.atan2(ST.hx,ST.hz),cx:player.x,cz:player.z,stage:0};}
+}
+function baseEmo(r){
+  const a=ST.act,cls=player.cls;
+  if(a===5)return r.fe||'eye';
+  if(a===0)return 'curious';
+  if(player.still>12)return a>=2?'sleep':'bored';
+  if(player.still>6)return a>=2?personaEmo(r,'angry'):'bored';
+  if(ST.place==='deadend')return 'question';
+  if(ST.junc&&ST.junc.open)return 'question';
+  if(a===1)return cls==='slow'?'happy':'curious';
+  const zm=zoneMod();let t=ST.trust+r.aff*0.5+zm.trust;if(a===4&&cls==='slow')t-=0.6;
+  if(zm.block)return t>0?'grim':personaEmo(r,'disgust');
+  if(ST.gating)return t>0.3?'grim':personaEmo(r,'angry');
+  return t>0.45?'happy':t>0.05?'neutral':t>-0.35?'grim':personaEmo(r,'sad');
+}
+function finalEmo(r){const a=r.aff+ST.trust*0.6;if(a>0.45)return 'love';if(a>0.12)return 'happy';if(a>-0.15)return ST.defy>ST.obey?'disgust':'neutral';if(a>-0.45)return personaEmo(r,'sad');return r.persona==='grumpy'?'disgust':'angry';}
+
+const head=new THREE.Vector3(),fwdV=new THREE.Vector3(),hp=new THREE.Vector3();
+function inView(r){camera.getWorldPosition(head);camera.getWorldDirection(fwdV);const dx=r.x-head.x,dz=r.z-head.z,d=Math.hypot(dx,dz)||1;return (dx*fwdV.x+dz*fwdV.z)/d/Math.hypot(fwdV.x,fwdV.z)>0.55;}
+const P=(A,s,l)=>({x:player.x+A.x*s-A.z*l,z:player.z+A.z*s+A.x*l});   // walker-relative path coords (l>0 = left)
+
+function updStory(dt){
+  if(!ST.on)return;
+  ST.t+=dt;ST.actT+=dt;ST.juncCool-=dt;const cls=player.cls;
+  // heading & trail
+  if(player.speed>0.35){const m=player.speed;ST.hx=damp(ST.hx,player.vx/m,3,dt);ST.hz=damp(ST.hz,player.vz/m,3,dt);}else{ST.hx=damp(ST.hx,player.fx,0.8,dt);ST.hz=damp(ST.hz,player.fz,0.8,dt);}
+  {const m=Math.hypot(ST.hx,ST.hz)||1;ST.hx/=m;ST.hz/=m;}
+  const step=Math.hypot(player.x-ST.lastPt.x,player.z-ST.lastPt.z);if(step>0.5){ST.dist+=step;ST.lastPt={x:player.x,z:player.z};ST.trail.push([player.x,player.z,player.speed]);if(ST.trail.length>1500)ST.trail.shift();}
+  // place
+  ST.placeT-=dt;if(ST.placeT<=0){ST.placeT=0.4;const info=placeAt(player.x,player.z,ST.hx,ST.hz);ST.info=info;ST.hist.push(info.type);if(ST.hist.length>3)ST.hist.shift();
+    const cnt={};ST.hist.forEach(t=>cnt[t]=(cnt[t]||0)+1);const top=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];if(top!==ST.place){if(top==='deadend')present().slice(0,3).forEach(r=>emote(r,'question',2));if(top==='open'&&ST.act>=1)present().slice(0,2).forEach(r=>emote(r,'surprised',1.5));}ST.place=top;
+    const N={x:-info.axis.dz,z:info.axis.dx};const wl=runWall(player.x,player.z,N.x,N.z,3.5),wr=runWall(player.x,player.z,-N.x,-N.z,3.5);if(wl!==null)ST.hl=damp(ST.hl,wl,2,0.4);if(wr!==null)ST.hr=damp(ST.hr,wr,2,0.4);}
+  const A0=ST.info?ST.info.axis:{dx:ST.hx,dz:ST.hz};let A={x:A0.dx,z:A0.dz};if(A.x*ST.hx+A.z*ST.hz<0)A={x:-A.x,z:-A.z};
+  if(ST.place==='open'||ST.place==='junction')A={x:ST.hx,z:ST.hz};
+
+  // acts
+  const a=ST.act;
+  if(a===0){ST.spawnT-=dt;if(ST.spawnT<=0){ST.spawnT=0.55;const r=rovers.find(r=>!r.present);if(r){const f=Math.min(8,run(player.x,player.z,ST.hx,ST.hz,9)-0.6);const p=snapFree(player.x+ST.hx*f+rand(-1,1)*-ST.hz,player.z+ST.hz*f+rand(-1,1)*ST.hx);if(p){showRover(r,p);emote(r,'curious',2,Math.random()<0.5);}}}if(ST.actT>9)setAct(1);}
+  else if(a===1&&(ST.dist>30||ST.actT>70))setAct(2);
+  else if(a===2&&((ST.dist>100&&ST.actT>60)||ST.actT>170||(ST.juncSeen>=1&&ST.actT>45)))setAct(3);
+  else if(a===3&&(ST.choices>=2||ST.actT>190))setAct(4);
+  else if(a===4&&((ST.adaptAt!==null&&ST.actT-ST.adaptAt>25)||ST.actT>90))setAct(5);
+
+  // conditioning (acts 2–4)
+  if(a>=2&&a<=4&&!ST.junc){
+    const zm=zoneMod();const good=ST.rule,bad=good==='slow'?'fast':'slow';const isBad=c=>c===bad||(zm.strictMid&&good==='slow'&&c==='mid');
+    ST.evalT-=dt;if(ST.evalT<=0){ST.evalT=1.3;
+      if(cls===good){ST.rewards++;ST.trust=Math.min(1,ST.trust+0.03);nearestPresent(2).forEach(r=>{r.flash=1;emote(r,'joy',1.8);r.aff=Math.min(1,r.aff+0.03);});}
+      else if(isBad(cls)&&!(zm.forgiveFast&&cls==='fast')){ST.punish++;ST.trust=Math.max(-1,ST.trust-0.04);
+        if(ST.place==='open')present().forEach(r=>{emote(r,personaEmo(r,'fear'),2.2,Math.random()<0.35);r.flee=1.6;});
+        else{if(!ST.gating)nearestPresent(3).forEach(r=>emote(r,personaEmo(r,'angry'),2.5));ST.gateUntil=ST.t+3;}}}
+    ST.goodT=cls===good||(good==='slow'&&cls==='still')?ST.goodT+dt:0;
+    ST.gating=(ST.place!=='open'&&(ST.t<ST.gateUntil||(ST.gating&&ST.goodT<1.5)))||zm.block;
+    if(a===4){if(cls==='fast')ST.fastAcc+=dt;if(ST.adaptAt===null&&ST.fastAcc>=5)ST.adaptAt=ST.actT;}
+  }else ST.gating=false;
+
+  // junction episodes
+  if(ST.place==='junction'&&!ST.junc&&ST.juncCool<=0&&a>=1&&a<=4&&ST.info){
+    const bx=-ST.hx,bz=-ST.hz;const brs=ST.info.branches.map(b=>({...b,back:b.dx*bx+b.dz*bz>0.7}));const fw=brs.filter(b=>!b.back);
+    brs.forEach(b=>{const c=corridorAt(player.x+b.dx*2.6,player.z+b.dz*2.6);let dx=c.dx,dz=c.dz;if(dx*b.dx+dz*b.dz<0){dx=-dx;dz=-dz;}if(dx*b.dx+dz*b.dz>0.5){b.dx=dx;b.dz=dz;}});
+    if(fw.length>=2){ST.junc={x:player.x,z:player.z,brs,t:0,open:a>=3?fw[Math.floor(Math.random()*fw.length)]:null};ST.juncSeen++;nearestPresent(2).forEach(r=>emote(r,a>=3?'question':'curious',1.8));}}
+  if(ST.junc){const J=ST.junc;J.t+=dt;const jd=Math.hypot(player.x-J.x,player.z-J.z);
+    if(jd>3.2||J.t>45){const ex=(player.x-J.x)/(jd||1),ez=(player.z-J.z)/(jd||1);let ch=J.brs[0],best=-2;J.brs.forEach(b=>{const d=b.dx*ex+b.dz*ez;if(d>best){best=d;ch=b;}});
+      if(!J.open){present().forEach(r=>emote(r,'happy',1.5,Math.random()<0.3));ST.trust+=0.02;}
+      else if(ch===J.open){ST.obey++;ST.choices++;ST.trust=Math.min(1,ST.trust+0.18);present().forEach((r,k)=>{emote(r,'joy',2.5,k<4);r.aff+=0.08;r.flash=1;});}
+      else if(ch.back){ST.trust-=0.08;present().forEach(r=>emote(r,personaEmo(r,'sad'),2.5,Math.random()<0.4));}
+      else{ST.defy++;ST.choices++;ST.trust=Math.max(-1,ST.trust-0.28);present().forEach((r,k)=>{emote(r,r.blocker?'disgust':personaEmo(r,'sad'),3,k<5);r.aff-=0.1;});}
+      rovers.forEach(r=>r.blocker=false);ST.junc=null;ST.juncCool=6;}}
+
+  // who stays with you: low trust makes rovers leave, regained trust brings them back
+  if(a>=1&&a<=4){const want=a===1?11:clamp(Math.round(11*(0.55+0.45*ST.trust)),3,11);const pr=present().filter(r=>!r.leaving);
+    if(pr.length>want){const r=pr.sort((x,y)=>x.aff-y.aff)[0];r.leaving=true;emote(r,personaEmo(r,'sad'),4);}
+    else if(pr.length<want){const r=rovers.find(r=>!r.present);if(r){const p=snapFree(player.x-ST.hx*5,player.z-ST.hz*5);if(p&&!inViewP(p)){showRover(r,p);emote(r,'curious',2,false);}}}}
+
+  // per-rover reactions: gaze, startle, left behind
+  camera.getWorldPosition(head);camera.getWorldDirection(fwdV);
+  for(const r of present()){
+    r.voiceT-=dt;if(r.emoT>0)r.emoT-=dt;r.flee=Math.max(0,r.flee-dt);
+    r.headPos(hp);const tx=hp.x-head.x,ty=hp.y-head.y,tz=hp.z-head.z,d3=Math.hypot(tx,ty,tz);const cosg=(tx*fwdV.x+ty*fwdV.y+tz*fwdV.z)/d3;
+    if(a>=1&&a<=4){
+      r.gazeCool=Math.max(0,(r.gazeCool||0)-dt);if(d3<5.5&&cosg>0.985&&player.speed<0.5&&r.gazeCool<=0)r.gaze+=dt;else r.gaze=Math.max(0,r.gaze-dt*2);
+      if(r.gaze>1.4){r.gaze=0;r.gazeCool=8;r.aff=Math.min(1,r.aff+0.12);ST.trust=Math.min(1,ST.trust+0.01);emote(r,ST.trust>-0.2?(r.aff>0.3?'love':'happy'):personaEmo(r,'sad'),3);}
+      const dx=r.x-player.x,dz=r.z-player.z,dd=Math.hypot(dx,dz)||1,closing=(player.vx*dx+player.vz*dz)/dd;
+      if(dd<2.3&&closing>0.85&&r.emo!=='fear'&&r.emo!=='angry'){emote(r,personaEmo(r,r.persona==='shy'?'fear':'surprised'),2.2);r.aff-=0.05;r.flee=1.2;}
+      if(dd>8&&(-player.vx*dx-player.vz*dz)/dd>0.4&&r.emoT<=0)emote(r,personaEmo(r,'sad'),2.5);
+    }
+    const e=r.emoT>0?r.emo:baseEmo(r);if(e!==r.shown){if(r.emoT<=0&&r.voiceT<=0&&Math.random()<0.3&&VOICE_OF[e]){roverVoice(r,VOICE_OF[e]);r.voiceT=2;}r.shown=e;}
+    const frozen=(a>=2&&a<=4&&player.still>12)||(a===5&&ST.gb&&ST.gb.t<10);
+    r.style=styleOf(e,frozen);
   }
-  if(mood!==SG.mood){if(mood==='angry')nearest(4).forEach((r,k)=>roverVoice(r,'angry',k*0.09));if(mood==='gate')rovers.slice(0,3).forEach((r,k)=>roverVoice(r,'sad',k*0.1));if(mood==='watch'&&SG.mood==='sleep')sfx('wake');SG.mood=mood;}
-  const st=STY[mood];rovers.forEach((r,k)=>{r.style=st;r.tx=SW.homes[k].x;r.tz=SW.homes[k].z;});
-  if(mood==='gate'){
-    const sg=clamp(p.s+1.9,SW.s0-1,SW.s1+4);const a=fromPath(sg,0);
-    const wl=runWall(a.x,a.z,SW.nx,SW.nz,3.5),wr=runWall(a.x,a.z,-SW.nx,-SW.nz,3.5);const L=wl!==null?wl:SW.hl,R=wr!==null?wr:SW.hr;const lo=-R+0.32,hi=L-0.32,W=Math.max(0.6,hi-lo);
-    const k=clamp(Math.floor(W/0.62)+1,2,6);const slots=[];for(let i=0;i<k;i++)slots.push(fromPath(sg,lo+W*i/(k-1)));for(let i=0;i<k-1;i++)slots.push(fromPath(sg+0.65,lo+W*(i+0.5)/(k-1)));
-    nearestAssign(rovers,slots);
-  }else if(mood==='angry'){
-    const ring=[];const n=6;for(let i=0;i<n;i++){const ang=i/n*Math.PI*2+SG.t*0.5;let s=p.s+Math.cos(ang)*1.0,l=p.l+Math.sin(ang)*1.0;const a=fromPath(s,0);const L=run(a.x,a.z,SW.nx,SW.nz,3.5)-0.32,R=run(a.x,a.z,-SW.nx,-SW.nz,3.5)-0.32;l=clamp(l,-R,L);ring.push(fromPath(s,l));}
-    nearestAssign(rovers,ring);
+
+  // ---------- formation targets ----------
+  const pr=present();const stay=pr.filter(r=>!r.leaving);let slots=[];
+  if(a===5){const g=ST.gb;g.t+=dt;
+    if(g.t<10){const n=stay.length;stay.forEach(r=>{});for(let i=0;i<n;i++){const ang=g.fa+(n>1?-1.15+2.3*i/(n-1):0);const p=snapFree(g.cx+Math.sin(ang)*2.2,g.cz+Math.cos(ang)*2.2);slots.push(p||{x:g.cx+Math.sin(ang)*2.2,z:g.cz+Math.cos(ang)*2.2});}
+      if(g.t<3)stay.forEach(r=>{r.emo='eye';r.emoT=0.2;});
+      else{if(g.stage===0){g.stage=1;stay.forEach((r,k)=>{r.fe=finalEmo(r);setTimeout(()=>{if(r.present)roverVoice(r,VOICE_OF[r.fe]||'murmur');},k*350);});}stay.forEach(r=>{r.emo=r.fe;r.emoT=0.2;});}}
+    else{if(g.stage===1){g.stage=2;stay.forEach(r=>{r.leaving=true;});}present().forEach(r=>{r.emo=r.fe||'sad';r.emoT=0.2;});
+      if(g.t>17&&!ST.ended){ST.ended=true;rovers.forEach(hideRover);}}
+  }
+  else if(ST.junc){const J=ST.junc;
+    if(J.open){const blocked=J.brs.filter(b=>!b.back&&b!==J.open);let pool=[...stay];
+      blocked.forEach(b=>{const cx=J.x+b.dx*1.7,cz=J.z+b.dz*1.7,nx=-b.dz,nz=b.dx;const L=runWall(cx,cz,nx,nz,3)??1.2,R=runWall(cx,cz,-nx,-nz,3)??1.2;const k=clamp(Math.floor((L+R-0.6)/0.62)+1,2,4);
+        for(let i=0;i<k;i++){const l=-R+0.3+(L+R-0.6)*i/(k-1);slots.push({x:cx+nx*l,z:cz+nz*l,block:true});}});
+      const o=J.open,onx=-o.dz,onz=o.dx;[1,-1].forEach(sd=>{const w=runWall(J.x+o.dx*1.4,J.z+o.dz*1.4,onx*sd,onz*sd,3)??1.1;slots.push({x:J.x+o.dx*1.4+onx*sd*(w-0.4),z:J.z+o.dz*1.4+onz*sd*(w-0.4)});});
+      while(slots.length<stay.length){const i=slots.length;const ang=Math.atan2(-ST.hx,-ST.hz)+(i%2?1:-1)*(0.5+i*0.12);slots.push({x:J.x+Math.sin(ang)*1.8,z:J.z+Math.cos(ang)*1.8});}}
+    else{for(let i=0;i<stay.length;i++){const ang=i/stay.length*6.28;slots.push({x:J.x+Math.sin(ang)*1.9,z:J.z+Math.cos(ang)*1.9});}}
+  }
+  else if(ST.place==='open'){stay.forEach((r,i)=>{r.roam+=dt*0.18*(i%2?1:-1);});}
+  else if(ST.place==='narrow'){for(let i=0;i<stay.length;i++){const s=i%2?1.4+0.7*Math.floor(i/2):-1.2-0.7*Math.floor(i/2);slots.push(P(A,s,0));}}
+  else if(ST.place==='deadend'){for(let i=0;i<stay.length;i++){const ang=Math.atan2(-ST.hx,-ST.hz)+(-1.1+2.2*i/Math.max(1,stay.length-1));slots.push({x:player.x+Math.sin(ang)*1.6,z:player.z+Math.cos(ang)*1.6});}}
+  else{ // corridor: escort along walls, or a gate across it
+    const hw=(s,side)=>{const p=P(A,s,0);const w=runWall(p.x,p.z,-A.z*side,A.x*side,3.5);return w!==null?w:(side>0?ST.hl:ST.hr);};
+    if(ST.gating){const s=1.9,L=hw(s,1),R=hw(s,-1),lo=-R+0.32,Wd=Math.max(0.6,L-0.32-lo),k=clamp(Math.floor(Wd/0.62)+1,2,6);for(let i=0;i<k;i++)slots.push(P(A,s,lo+Wd*i/(k-1)));for(let i=0;i<k-1;i++)slots.push(P(A,s+0.65,lo+Wd*(i+0.5)/(k-1)));}
+    const ss=[2.3,3.4,-1.8,4.5,5.6,-3.0,6.7,-4.2,7.8,-5.4,8.9];let i=0;while(slots.length<stay.length){const s=ss[i%ss.length];const side=i%2?1:-1;slots.push(P(A,s,side*Math.max(0.3,hw(s,side)-0.4)));i++;}
+  }
+  // assign
+  if(slots.length){const sn=slots.map(s=>{const q=snapFree(s.x,s.z);return q?{...q,block:s.block}:null;});const valid=[];sn.forEach(s=>{if(s)valid.push(s);});
+    const used=new Set(),done=new Set(),pairs=[];stay.forEach(r=>valid.forEach((s,i)=>pairs.push([Math.hypot(r.x-s.x,r.z-s.z),r,i])));pairs.sort((x,y)=>x[0]-y[0]);
+    for(const [,r,i] of pairs){if(done.has(r)||used.has(i))continue;done.add(r);used.add(i);r.tx=valid[i].x;r.tz=valid[i].z;r.blocker=!!valid[i].block;}}
+  else if(ST.place==='open'&&a!==5){stay.forEach(r=>{const rr=r.flee>0?4:r.roamR*zoneMod().roam;const p=snapFree(player.x+Math.cos(r.roam)*rr,player.z+Math.sin(r.roam)*rr);if(p){r.tx=p.x;r.tz=p.z;}});}
+  // leaving rovers drive away behind you, then vanish when out of sight
+  pr.filter(r=>r.leaving).forEach(r=>{const p=a===5?snapFree(player.x+ST.hx*11+(r.i-5)*0.6*-ST.hz,player.z+ST.hz*11+(r.i-5)*0.6*ST.hx):snapFree(player.x-ST.hx*9,player.z-ST.hz*9);if(p){r.tx=p.x;r.tz=p.z;}if(dist(r,player)>7&&!inView(r))hideRover(r);});
+  // flee pushes, speed limits, catch-up when left far behind
+  for(const r of present()){
+    if(r.flee>0){const dx=r.x-player.x,dz=r.z-player.z,d=Math.hypot(dx,dz)||1;r.tx=r.x+dx/d*1.2;r.tz=r.z+dz/d*1.2;}
+    const dT=Math.hypot(r.tx-r.x,r.tz-r.z);r.maxS=(dT>3?1.6:(r.style.fast?0.95:0.65))*(dT>3?1:zoneMod().speed);
+    if(!r.leaving&&dist(r,player)>11&&!inView(r)){const p=snapFree(player.x-ST.hx*3+rand(-1,1)*-ST.hz,player.z-ST.hz*3+rand(-1,1)*ST.hx);if(p){r.x=r.px=p.x;r.z=r.pz=p.z;r.vx=r.vz=0;}}
   }
 }
-function nearest(n){return [...rovers].sort((a,b)=>dist(a,player)-dist(b,player)).slice(0,n);}
+function inViewP(p){camera.getWorldPosition(head);camera.getWorldDirection(fwdV);const dx=p.x-head.x,dz=p.z-head.z,d=Math.hypot(dx,dz)||1;return (dx*fwdV.x+dz*fwdV.z)/d/Math.hypot(fwdV.x,fwdV.z)>0.4;}
 function resolve(){
+  const pr=present();
   for(let it=0;it<2;it++){
-    for(let i=0;i<rovers.length;i++)for(let j=i+1;j<rovers.length;j++){const a=rovers[i],b=rovers[j];const dx=b.x-a.x,dz=b.z-a.z,d=Math.hypot(dx,dz);if(d<0.5&&d>1e-5){const q=(0.5-d)/2;a.x-=dx/d*q;a.z-=dz/d*q;b.x+=dx/d*q;b.z+=dz/d*q;}}
-    for(const r of rovers){const dx=r.x-player.x,dz=r.z-player.z,d=Math.hypot(dx,dz);if(d<0.6&&d>1e-5){r.x+=dx/d*(0.6-d);r.z+=dz/d*(0.6-d);}}
+    for(let i=0;i<pr.length;i++)for(let j=i+1;j<pr.length;j++){const a=pr[i],b=pr[j];const dx=b.x-a.x,dz=b.z-a.z,d=Math.hypot(dx,dz);if(d<0.5&&d>1e-5){const q=(0.5-d)/2;a.x-=dx/d*q;a.z-=dz/d*q;b.x+=dx/d*q;b.z+=dz/d*q;}}
+    for(const r of pr){const dx=r.x-player.x,dz=r.z-player.z,d=Math.hypot(dx,dz);if(d<0.6&&d>1e-5){r.x+=dx/d*(0.6-d);r.z+=dz/d*(0.6-d);}}
   }
-  for(const r of rovers){if(isOcc(gi(r.x,r.z))&&r.px!==undefined){r.x=r.px;r.z=r.pz;r.vx*=-0.2;r.vz*=-0.2;}r.px=r.x;r.pz=r.z;}
+  for(const r of pr){if(isOcc(gi(r.x,r.z))&&r.px!==undefined){r.x=r.px;r.z=r.pz;r.vx*=-0.2;r.vz*=-0.2;}r.px=r.x;r.pz=r.z;}
 }
 
-// ================= simulator corridor (laptop) =================
-// A campus-style corridor with an L turn and pillars. The same depth-ray pipeline runs against it.
+// ================= simulator campus (laptop) =================
+// Corridor → T-junction → open plaza, narrow passage → dead-end room. Same depth pipeline runs against it.
 const sim=new THREE.Group();scene.add(sim);const simMeshes=[];
-const RECTS=[[-1.3,1.3,-19.3,2.2],[-1.3,14,-19.3,-16.7]];
-const PILLARS=[[-1.12,-2.5],[-1.12,-6.5],[-1.12,-10.5],[-1.12,-14.5],[5,-19.12],[9,-19.12]];
+const RECTS=[[-1.3,1.3,-20,2.2],[-12,12,-22.6,-20],[6,20,-34,-22.6],[-19,-11.9,-21.9,-20.7],[-25,-19,-25,-17]];
+const BLOCKS=[[-1.12,-3,0.36],[-1.12,-8,0.36],[-1.12,-13,0.36],[12,-28,0.9],[16,-31,0.9],[9,-31.5,0.6]];
 {
   const tileTex=canvasTex(512,512,(g)=>{g.fillStyle='#9a958c';g.fillRect(0,0,512,512);for(let y=0;y<4;y++)for(let x=0;x<4;x++){const v=150+Math.random()*12;g.fillStyle=`rgb(${v},${v-4},${v-10})`;g.fillRect(x*128+2,y*128+2,124,124);}const id=g.getImageData(0,0,512,512),d=id.data;for(let i=0;i<d.length;i+=4){const n=(Math.random()-.5)*10;d[i]+=n;d[i+1]+=n;d[i+2]+=n;}g.putImageData(id,0,0);});
   tileTex.wrapS=tileTex.wrapT=THREE.RepeatWrapping;
-  const floorMat=new THREE.MeshStandardMaterial({map:tileTex,roughness:0.32,metalness:0,envMapIntensity:0.7});
-  const wallMat=new THREE.MeshStandardMaterial({color:0xd8d2c6,roughness:0.9});
-  const darkMat=new THREE.MeshStandardMaterial({color:0x6d675e,roughness:0.8});
-  RECTS.forEach(([x0,x1,z0,z1])=>{const w=x1-x0,d=z1-z0;const t=tileTex.clone();t.needsUpdate=true;t.repeat.set(w/2,d/2);const f=new THREE.Mesh(new THREE.PlaneGeometry(w,d),floorMat.clone());f.material.map=t;f.rotation.x=-Math.PI/2;f.position.set((x0+x1)/2,0,(z0+z1)/2);f.receiveShadow=true;sim.add(f);simMeshes.push(f);
-    const c=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshStandardMaterial({color:0xbdb7ab,roughness:1}));c.rotation.x=Math.PI/2;c.position.set((x0+x1)/2,3.1,(z0+z1)/2);sim.add(c);});
-  const wall=(x0,z0,x1,z1)=>{const L=Math.hypot(x1-x0,z1-z0);const m=new THREE.Mesh(new THREE.BoxGeometry(L,3.1,0.2),wallMat);m.position.set((x0+x1)/2,1.55,(z0+z1)/2);m.rotation.y=-Math.atan2(z1-z0,x1-x0);m.receiveShadow=true;m.castShadow=true;sim.add(m);simMeshes.push(m);
-    const sk=new THREE.Mesh(new THREE.BoxGeometry(L,0.12,0.22),darkMat);sk.position.set(m.position.x,0.06,m.position.z);sk.rotation.y=m.rotation.y;sim.add(sk);};
-  wall(-1.4,2.2,-1.4,-19.4);wall(1.4,2.2,1.4,-16.6);wall(-1.4,-19.4,14.1,-19.4);wall(1.4,-16.6,14.1,-16.6);wall(-1.4,2.3,1.4,2.3);wall(14.1,-19.4,14.1,-16.6);
-  PILLARS.forEach(([x,z])=>{const p=new THREE.Mesh(new THREE.BoxGeometry(0.36,3.1,0.36),wallMat);p.position.set(x,1.55,z);p.castShadow=p.receiveShadow=true;sim.add(p);simMeshes.push(p);});
-  const lampMat=new THREE.MeshBasicMaterial({color:0xfff4e6});
-  for(let z=0;z>-19;z-=3.2){const l=new THREE.Mesh(new THREE.BoxGeometry(0.18,0.03,1.2),lampMat);l.position.set(0,3.08,z);sim.add(l);const pl=new THREE.PointLight(0xfff1e0,5,7,2);pl.position.set(0,2.9,z);sim.add(pl);}
-  for(let x=3;x<14;x+=3.2){const l=new THREE.Mesh(new THREE.BoxGeometry(1.2,0.03,0.18),lampMat);l.position.set(x,3.08,-18);sim.add(l);const pl=new THREE.PointLight(0xfff1e0,5,7,2);pl.position.set(x,2.9,-18);sim.add(pl);}
+  RECTS.forEach(([x0,x1,z0,z1],k)=>{const w=x1-x0,d=z1-z0;const t=tileTex.clone();t.needsUpdate=true;t.repeat.set(w/2,d/2);const f=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshStandardMaterial({map:t,roughness:0.32,envMapIntensity:0.7}));f.rotation.x=-Math.PI/2;f.position.set((x0+x1)/2,0.0004*k,(z0+z1)/2);f.receiveShadow=true;sim.add(f);simMeshes.push(f);});
+  const inside=(x,z)=>RECTS.some(([x0,x1,z0,z1])=>x>x0&&x<x1&&z>z0&&z<z1);const C=0.25,walls=[];
+  for(let x=-26;x<21;x+=C)for(let z=-35;z<3;z+=C){const cx=x+C/2,cz=z+C/2;if(!inside(cx,cz))continue;[[C,0],[-C,0],[0,C],[0,-C]].forEach(([dx,dz])=>{if(!inside(cx+dx,cz+dz))walls.push([cx+dx/2,cz+dz/2,dx===0]);});}
+  const wm=new THREE.InstancedMesh(new THREE.BoxGeometry(C+0.02,3.1,0.16),new THREE.MeshStandardMaterial({color:0xd8d2c6,roughness:0.9}),walls.length);const m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler();
+  walls.forEach(([x,z,horiz],i)=>{e.set(0,horiz?0:Math.PI/2,0);q.setFromEuler(e);m.compose(new THREE.Vector3(x,1.55,z),q,new THREE.Vector3(1,1,1));wm.setMatrixAt(i,m);});wm.castShadow=wm.receiveShadow=true;sim.add(wm);simMeshes.push(wm);
+  BLOCKS.forEach(([x,z,s])=>{const b=new THREE.Mesh(new THREE.BoxGeometry(s,s>0.5?0.9:3.1,s),new THREE.MeshStandardMaterial({color:s>0.5?0x6f6a60:0xd8d2c6,roughness:0.85}));b.position.set(x,s>0.5?0.45:1.55,z);b.castShadow=b.receiveShadow=true;sim.add(b);simMeshes.push(b);});
 }
-function simFree(x,z){const m=0.25;const inR=RECTS.some(([x0,x1,z0,z1])=>x>x0+m&&x<x1-m&&z>z0+m&&z<z1-m);if(!inR)return false;return !PILLARS.some(([px,pz])=>Math.abs(x-px)<0.18+m&&Math.abs(z-pz)<0.18+m);}
+function simFree(x,z){const m=0.25;if(!insideAnyOther(x,z,m))return false;return !BLOCKS.some(([bx,bz,s])=>Math.abs(x-bx)<s/2+m&&Math.abs(z-bz)<s/2+m);}
+function insideAnyOther(x,z,m){return [[m,0],[-m,0],[0,m],[0,-m]].every(([dx,dz])=>RECTS.some(([x0,x1,z0,z1])=>x+dx>x0&&x+dx<x1&&z+dz>z0&&z+dz<z1));}
 const ray=new THREE.Raycaster();ray.far=12;
 function simHits(){camera.getWorldPosition(tmpV);const q=camera.getWorldQuaternion(new THREE.Quaternion());for(const d0 of FAN_DIRS){const d=d0.clone().applyQuaternion(q);ray.set(tmpV,d);const h=ray.intersectObjects(simMeshes,false)[0];if(h){const n=(Math.random()-0.5)*0.03;ingestHit(tmpV.x,tmpV.z,h.point.x+n,h.point.y,h.point.z+n);}}}
 
 // ================= passthrough AR session =================
 let arSession=null,hitSources=[],viewerSpace=null,planeT=0,autoT=0;
 async function startAR(){
-  audioInit();
+  audioInit();geoStart();
   const opts={requiredFeatures:['hit-test','local-floor'],optionalFeatures:['plane-detection','anchors']};
   let session;try{session=await navigator.xr.requestSession('immersive-ar',opts);}catch(e){session=await navigator.xr.requestSession('immersive-ar',{optionalFeatures:['hit-test','local-floor','plane-detection']});}
   arSession=session;
   session.addEventListener('end',()=>{arSession=null;hitSources=[];scene.background=SIM_BG;sim.visible=true;catcher.visible=false;rovers.forEach(r=>r.glowMat.opacity=0.16);camera.position.set(0,1.62,0);});
   await renderer.xr.setSession(session);
   scene.background=null;sim.visible=false;catcher.visible=true;rovers.forEach(r=>{r.glowMat.opacity=0;});
-  dolly.position.set(0,0,0);dolly.rotation.set(0,0,0);resetMap();SW.placed=false;rovers.forEach(r=>r.group.visible=false);autoT=4;
+  dolly.position.set(0,0,0);dolly.rotation.set(0,0,0);resetMap();ST.on=false;rovers.forEach(hideRover);autoT=4;
   $('#intro').style.display='none';
   try{viewerSpace=await session.requestReferenceSpace('viewer');
     for(const d of FAN_DIRS){const offsetRay=new XRRay({x:0,y:0,z:0,w:1},{x:d.x,y:d.y,z:d.z,w:0});let src=null;
@@ -528,38 +711,40 @@ function arFrame(frame){
     frame.detectedPlanes.forEach(pl=>{if(pl.orientation!=='vertical')return;const pose=frame.getPose(pl.planeSpace,ref);if(!pose)return;const m=new THREE.Matrix4().fromArray(pose.transform.matrix);const pts=pl.polygon.map(p=>new THREE.Vector3(p.x,p.y,p.z).applyMatrix4(m));
       for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];const L=Math.hypot(b.x-a.x,b.z-a.z),n=Math.ceil(L/G.res);for(let k=0;k<=n;k++)markOcc(a.x+(b.x-a.x)*k/n,a.z+(b.z-a.z)*k/n,0.5);}});}
 }
-// controller trigger: place the swarm where you point on the floor
-const ctrls=[0,1].map(i=>{const c=renderer.xr.getController(i);c.addEventListener('select',()=>placeAtRay(c));c.addEventListener('squeeze',()=>{debugOn=!debugOn;});dolly.add(c);return c;});
-function placeAtRay(obj){obj.updateMatrixWorld(true);const o=new THREE.Vector3().setFromMatrixPosition(obj.matrixWorld);const d=new THREE.Vector3(0,0,-1).transformDirection(obj.matrixWorld);placeFromRay(o,d);}
-function placeFromRay(o,d){if(d.y<-0.03){const t=-o.y/d.y;if(t<15){placeSwarm(o.x+d.x*t,o.z+d.z*t);return;}}placeSwarm(player.x+player.fx*5.5,player.z+player.fz*5.5);}
+// trigger: restart the story once it has ended · grip: show / hide the detected walls
+const ctrls=[0,1].map(i=>{const c=renderer.xr.getController(i);c.addEventListener('select',()=>{if(!ST.on||ST.ended)resetStory();});c.addEventListener('squeeze',()=>{debugOn=!debugOn;});dolly.add(c);return c;});
 
 // ================= debug views =================
-let debugOn=false,mapOn=true,debugT=0;
+let debugOn=false,mapOn=true;
 const DBG_MAX=5000;
 const dbg=new THREE.InstancedMesh(new THREE.BoxGeometry(G.res*0.9,0.015,G.res*0.9),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.45,depthWrite:false}),DBG_MAX);dbg.count=0;dbg.frustumCulled=false;scene.add(dbg);
 const _m=new THREE.Matrix4();
-function updDebug(){dbg.visible=debugOn;if(!debugOn)return;let c=0;const ci=Math.floor((player.x+G.half)/G.res),cj=Math.floor((player.z+G.half)/G.res),R=75;
+function updDebug(){dbg.visible=debugOn;if(!debugOn)return;let c=0;const ci=Math.floor((player.x+G.half)/G.res),cj=Math.floor((player.z+G.half)/G.res),R=70;
   for(let j=cj-R;j<=cj+R&&c<DBG_MAX;j++)for(let i=ci-R;i<=ci+R&&c<DBG_MAX;i++){if(i<0||j<0||i>=G.N||j>=G.N)continue;if(G.lo[j*G.N+i]>OCC_T){_m.makeTranslation(-G.half+(i+.5)*G.res,0.01,-G.half+(j+.5)*G.res);dbg.setMatrixAt(c++,_m);}}
   dbg.count=c;dbg.instanceMatrix.needsUpdate=true;}
+const PLACE_C={corridor:'#ffffff',open:'#7fdc8a',junction:'#eec034',narrow:'#e07c2e',deadend:'#d6482e'};
 const mapCv=$('#map'),mg=mapCv.getContext('2d');const mapImg=mg.createImageData(120,120);
 function drawMap(){if(!mapOn||arSession){mapCv.style.display='none';return;}mapCv.style.display='block';
   const ci=Math.floor((player.x+G.half)/G.res),cj=Math.floor((player.z+G.half)/G.res),d=mapImg.data;
   for(let y=0;y<120;y++)for(let x=0;x<120;x++){const i=ci-60+x,j=cj-60+y,o=(y*120+x)*4;let v=0;if(i>=0&&j>=0&&i<G.N&&j<G.N){const l=G.lo[j*G.N+i];v=l>OCC_T?235:l<FREE_T?58:14;}d[o]=d[o+1]=d[o+2]=v;d[o+3]=255;}
   mg.putImageData(mapImg,0,0);mg.imageSmoothingEnabled=false;mg.drawImage(mapCv,0,0,120,120,0,0,240,240);
   const sx=x=>(x-player.x)/G.res*2+120,sy=z=>(z-player.z)/G.res*2+120;
-  if(SW.placed){mg.strokeStyle='rgba(120,200,255,.8)';mg.lineWidth=1;const a=fromPath(SW.s0-8,0),b=fromPath(SW.s1+4,0);mg.beginPath();mg.moveTo(sx(a.x),sy(a.z));mg.lineTo(sx(b.x),sy(b.z));mg.stroke();
-    rovers.forEach(r=>{mg.fillStyle=rgb(r.lc);mg.beginPath();mg.arc(sx(r.x),sy(r.z),3,0,7);mg.fill();});}
+  if(ST.on){mg.strokeStyle='rgba(255,255,255,.35)';mg.beginPath();ST.trail.forEach(([x,z],i)=>i?mg.lineTo(sx(x),sy(z)):mg.moveTo(sx(x),sy(z)));mg.stroke();
+    if(ST.junc){mg.strokeStyle='#eec034';ST.junc.brs.forEach(b=>{mg.beginPath();mg.moveTo(sx(ST.junc.x),sy(ST.junc.z));mg.lineTo(sx(ST.junc.x+b.dx*3),sy(ST.junc.z+b.dz*3));mg.stroke();});}
+    if(!arSession)SIM_ZONES.forEach(z=>{mg.strokeStyle=LOC.zone===z?'#eec034':'rgba(238,192,52,.45)';mg.beginPath();mg.arc(sx(z.x),sy(z.z),z.r/G.res*2,0,7);mg.stroke();});
+    present().forEach(r=>{mg.fillStyle=rgb(r.lc);mg.beginPath();mg.arc(sx(r.x),sy(r.z),3,0,7);mg.fill();});}
+  mg.strokeStyle=PLACE_C[ST.place]||'#fff';mg.lineWidth=2;mg.strokeRect(1,1,238,238);mg.lineWidth=1;
   mg.fillStyle='#fff';mg.beginPath();mg.arc(120,120,4,0,7);mg.fill();mg.strokeStyle='#fff';mg.beginPath();mg.moveTo(120,120);mg.lineTo(120+player.fx*14,120+player.fz*14);mg.stroke();}
 
 // ================= walker tracking & laptop controls =================
 function trackPlayer(dt){camera.getWorldPosition(tmpV);const ivx=(tmpV.x-player.x)/dt,ivz=(tmpV.z-player.z)/dt;player.x=tmpV.x;player.z=tmpV.z;
   const k=Math.abs(ivx)>8||Math.abs(ivz)>8?0:1;player.vx=damp(player.vx,ivx*k,5,dt);player.vz=damp(player.vz,ivz*k,5,dt);player.speed=Math.hypot(player.vx,player.vz);
   camera.getWorldDirection(tmpV2);tmpV2.y=0;if(tmpV2.lengthSq()>1e-4){tmpV2.normalize();player.fx=tmpV2.x;player.fz=tmpV2.z;}
-  const prev=player.cls,s=player.speed;   // hysteresis so one quick step doesn't flip the state
+  const prev=player.cls,s=player.speed;
   player.cls=s<0.08?'still':prev==='fast'?(s>0.8?'fast':s<0.5?'slow':'mid'):prev==='slow'?(s<0.62?'slow':s>0.95?'fast':'mid'):(s<0.55?'slow':s>0.95?'fast':'mid');
   player.still=player.cls==='still'?player.still+dt:0;}
 const keys={};let dragging=false,lastX=0,lastY=0,simOn=false;
-addEventListener('keydown',e=>{keys[e.code]=true;if(!simOn)return;if(e.code==='KeyP')placeFromRay(camera.getWorldPosition(new THREE.Vector3()),camera.getWorldDirection(new THREE.Vector3()));if(e.code==='KeyB')debugOn=!debugOn;if(e.code==='KeyT')mapOn=!mapOn;if(e.code==='KeyR'){resetMap();SW.placed=false;rovers.forEach(r=>r.group.visible=false);autoT=3;}if(e.code==='KeyM'){AU.on=!AU.on;if(AU.master)AU.master.gain.value=AU.on?0.9:0;}});
+addEventListener('keydown',e=>{keys[e.code]=true;if(!simOn)return;if(e.code==='KeyP'||e.code==='KeyR')resetStory();if(e.code==='KeyB')debugOn=!debugOn;if(e.code==='KeyT')mapOn=!mapOn;if(e.code==='KeyM'){AU.on=!AU.on;if(AU.master)AU.master.gain.value=AU.on?0.9:0;}if(e.code==='KeyN'&&ST.on&&ST.act<5)setAct(ST.act+1);});
 addEventListener('keyup',e=>keys[e.code]=false);
 canvas.addEventListener('mousedown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY;if(simOn){try{const p=canvas.requestPointerLock&&canvas.requestPointerLock();if(p&&p.catch)p.catch(()=>{});}catch(err){}}});
 addEventListener('mouseup',()=>dragging=false);
@@ -584,15 +769,15 @@ renderer.setAnimationLoop((time,frame)=>{
   if(arSession){if(frame)arFrame(frame);}
   else{if(!simOn){introT+=dt;yaw=Math.sin(introT*0.15)*0.3;camera.rotation.set(pitch,yaw,0,'YXZ');}else moveSim(dt);simHits();}
   trackPlayer(dt);clearUnderWalker();
-  if(autoT>0){autoT-=dt;if(autoT<=0&&!SW.placed&&(simOn||arSession))placeSwarm(player.x+player.fx*5.5,player.z+player.fz*5.5);}
-  updSwarm(dt);
-  if(SW.placed){rovers.forEach(r=>r.step(dt,visitors));resolve();rovers.forEach(r=>{r.pose(dt,t);r.look(dt,t);});}
+  if(autoT>0){autoT-=dt;if(autoT<=0&&(simOn||arSession))resetStory();}
+  updStory(dt);updGeo(dt);VOL=zoneMod().vol;
+  const pr=present();pr.forEach(r=>r.step(dt,visitors));resolve();pr.forEach(r=>{r.pose(dt,t);r.look(dt,t);});
   sun.position.set(player.x+2,6,player.z+1);sun.target.position.set(player.x,0,player.z);sun.target.updateMatrixWorld();
   updAudio();
   mapT-=dt;if(mapT<=0){mapT=0.25;drawMap();updDebug();}
   renderer.render(scene,camera);
 });
-window.CONDITIONALS_AR={dolly,camera,rovers,SW,SG,G,player,setYaw:(y,p)=>{yaw=y;pitch=p;},placeSwarm};
+window.CONDITIONALS_AR={LOC,ZONES,onGeo,dolly,camera,rovers,ST,G,player,setYaw:(y,p)=>{yaw=y;pitch=p;},resetStory,setAct};
 </script>
 </body>
 </html>
